@@ -35,9 +35,9 @@ const HomePage: React.FC = () => {
       
       {/* --------------------- SECTION : BANNIÈRE D'INTRODUCTION --------------------- */}
       <section className="text-center py-12 bg-brand-sand rounded-lg shadow-inner">
-        <h1 className="text-5xl font-serif font-bold text-brand-brown mb-4">L'Afrique, un continent d'avenirs</h1>
+        <h1 className="text-5xl font-serif font-bold text-brand-brown mb-4">GROUPE NGANGUE ET FILS INTERNATIONAL</h1>
         <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-          Plongez au cœur des récits, des traditions et des innovations qui façonnent l'Afrique d'aujourd'hui et de demain.
+          Les associations principales: AFAC -AHEAD.  APFI  AFL'EC
         </p>
       </section>
 
