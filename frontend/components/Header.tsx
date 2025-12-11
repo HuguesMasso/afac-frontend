@@ -60,12 +60,6 @@ const Header: React.FC<HeaderProps> = ({ currentRoute }) => {
                             </a>
                         </li>
                         
-                        {/* Optionnel: Ajouter un lien pour l'Admin/Login ici si nécessaire */}
-                        {/* <li>
-                            <a href="#/admin" className={getLinkClass('#/admin')}>
-                                Admin
-                            </a>
-                        </li> */}
                     </ul>
                 </nav>
             </div>

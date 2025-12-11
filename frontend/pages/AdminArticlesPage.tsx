@@ -1,122 +1,124 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { useContent } from '../hooks/useContent'; 
-import type { Article } from '../types';
+// REMARQUE: Pas d'import de 'react-router-dom' pour éviter l'erreur de contexte.
+
+interface Article {
+    id: number;
+    title: string;
+    date: string;
+}
 
 const AdminArticlesPage: React.FC = () => {
-    // 1. Chargement des données (utilise le hook useContent pour les articles)
-    // Nous utilisons la fonction refreshContent pour mettre à jour la liste après suppression.
-    const { articles, isLoading, error, refreshContent } = useContent(); 
-    const [message, setMessage] = useState('');
-    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [articles, setArticles] = useState<Article[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Fonction pour formater la date (vous pouvez la réutiliser de ArticlePage)
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('fr-FR', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-        }).format(date);
+    const fetchArticles = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('articles')
+            .select('id, title, date')
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des articles:', error);
+            setError('Impossible de charger la liste des articles.');
+            setArticles([]);
+        } else {
+            setArticles(data || []);
+        }
+        setLoading(false);
     };
 
-    // 2. Logique de Suppression (DELETE)
+    useEffect(() => {
+        fetchArticles();
+    }, []);
+
     const handleDelete = async (articleId: number, articleTitle: string) => {
-        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'article : "${articleTitle}" ? Cette action est irréversible.`)) {
+        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer l'article : "${articleTitle}" ?`)) {
             return;
         }
 
-        setDeletingId(articleId);
-        setMessage('');
+        setLoading(true);
+        const { error } = await supabase
+            .from('articles')
+            .delete()
+            .eq('id', articleId);
 
-        try {
-            const { error } = await supabase
-                .from('articles')
-                .delete()
-                .eq('id', articleId);
-
-            if (error) throw error;
-
-            setMessage(`✅ Article "${articleTitle}" supprimé avec succès !`);
-            
-            // Recharger le contenu pour mettre à jour la liste
-            refreshContent(); 
-            
-        } catch (error: any) {
-            console.error('Erreur lors de la suppression de l\'article:', error.message);
-            setMessage(`❌ Erreur de suppression: ${error.message}. Vérifiez les RLS.`);
-        } finally {
-            setDeletingId(null);
+        if (error) {
+            setError(`Échec de la suppression : ${error.message}`);
+            setLoading(false);
+        } else {
+            // Recharger la liste après une suppression réussie
+            fetchArticles();
         }
     };
 
-    if (isLoading) {
-        return <div className="text-center py-20 text-xl">Chargement des articles...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center py-20 text-red-600 font-bold">{error}</div>;
-    }
+    if (loading) return <div className="text-center py-20"><p className="text-lg text-gray-700">Chargement de la liste des articles...</p></div>;
+    if (error) return <div className="text-center py-20 text-red-600"><p className="text-lg">{error}</p></div>;
 
     return (
-        <div className="max-w-7xl mx-auto py-10 px-4">
-            <header className="flex justify-between items-center mb-8 border-b pb-4">
-                <h1 className="text-4xl font-bold text-brand-brown">Gestion des Articles du Blog</h1>
+        <div className="p-4">
+            <header className="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
+                <h1 className="text-3xl font-extrabold text-gray-800">Gestion du Blog (Articles)</h1>
                 <a 
-                    href="#/admin/new-article" 
-                    className="bg-brand-green text-white py-2 px-4 rounded-md shadow hover:bg-brand-ochre transition-colors"
+                    href="#/admin/new-article"
+                    className="flex items-center space-x-2 bg-brand-green text-white py-2 px-4 rounded-lg font-medium shadow-md hover:bg-green-700 transition-colors"
                 >
-                    + Ajouter un Nouvel Article
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Ajouter un Article</span>
                 </a>
             </header>
 
-            {message && (
-                <div className={`p-4 mb-4 rounded ${message.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {message}
-                </div>
-            )}
-
             {articles.length === 0 ? (
-                <p className="text-center text-xl text-gray-500 py-16">
-                    Aucun article dans la base de données.
-                </p>
+                <div className="text-center py-10 bg-white rounded-lg shadow">
+                    <p className="text-gray-500">Aucun article n'a été publié pour le moment.</p>
+                </div>
             ) : (
-                <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+                <div className="overflow-x-auto shadow-xl rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-100">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Titre</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Résumé</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    ID
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Titre de l'Article
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Publié le
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {articles.map((article: Article) => (
-                                <tr key={article.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{article.id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-800 font-semibold">{article.title}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(article.date)}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{article.summary}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                        
-                                        {/* 3. Lien vers la page de MODIFICATION */}
-                                        <a 
-                                            // La page EditArticlePage.tsx reste à créer, mais le lien est prêt.
-                                            href={`#/admin/edit-article/${article.id}`} 
-                                            className="text-brand-ochre hover:text-brand-brown"
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {articles.map((article) => (
+                                <tr key={article.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {article.id}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-700 max-w-sm truncate">
+                                        {article.title}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {new Date(article.date).toLocaleDateString('fr-FR')}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-3">
+                                        <a
+                                            href={`#/admin/edit-article/${article.id}`}
+                                            className="text-brand-blue hover:underline p-2 rounded-md transition-colors"
+                                            title="Éditer l'article"
                                         >
-                                            Modifier
+                                            Éditer
                                         </a>
-                                        
-                                        {/* 4. Bouton de SUPPRESSION */}
                                         <button
                                             onClick={() => handleDelete(article.id, article.title)}
-                                            disabled={deletingId === article.id}
-                                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                            className="text-red-600 hover:text-red-800 p-2 rounded-md transition-colors"
+                                            title="Supprimer l'article"
                                         >
-                                            {deletingId === article.id ? 'Suppression...' : 'Supprimer'}
+                                            Supprimer
                                         </button>
                                     </td>
                                 </tr>

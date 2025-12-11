@@ -1,115 +1,131 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { useContent } from '../hooks/useContent'; 
-import type { Product } from '../types';
+// REMARQUE: Pas d'import de 'react-router-dom' pour éviter l'erreur de contexte.
+
+interface Product {
+    id: number;
+    name: string;
+    price: number;
+    date: string;
+}
 
 const AdminProductsPage: React.FC = () => {
-    // 1. Chargement des données (utilise le hook useContent pour les produits)
-    const { products, isLoading, error, refreshContent } = useContent(); 
-    const [message, setMessage] = useState('');
-    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Fonction de formatage du prix pour l'affichage
-    const formatPrice = (price: number) => {
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price);
+    const fetchProducts = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('products')
+            .select('id, name, price, date')
+            .order('date', { ascending: false });
+
+        if (error) {
+            console.error('Erreur de chargement des produits:', error);
+            setError('Impossible de charger la liste des produits.');
+            setProducts([]);
+        } else {
+            setProducts(data || []);
+        }
+        setLoading(false);
     };
 
-    // 2. Logique de Suppression (DELETE)
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
     const handleDelete = async (productId: number, productName: string) => {
-        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le produit : "${productName}" ? Cette action est irréversible.`)) {
+        if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le produit : "${productName}" ?`)) {
             return;
         }
 
-        setDeletingId(productId);
-        setMessage('');
+        setLoading(true);
+        const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId);
 
-        try {
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', productId);
-
-            if (error) throw error;
-
-            setMessage(`✅ Produit "${productName}" supprimé avec succès !`);
-            
-            // Recharger le contenu pour mettre à jour la liste
-            refreshContent(); // Assurez-vous que votre useContent exporte cette fonction
-            
-        } catch (error: any) {
-            console.error('Erreur lors de la suppression:', error.message);
-            setMessage(`❌ Erreur de suppression: ${error.message}. Vérifiez les RLS.`);
-        } finally {
-            setDeletingId(null);
+        if (error) {
+            setError(`Échec de la suppression : ${error.message}`);
+            setLoading(false);
+        } else {
+            // Recharger la liste après une suppression réussie
+            fetchProducts();
         }
     };
 
-    if (isLoading) {
-        return <div className="text-center py-20 text-xl">Chargement des produits...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center py-20 text-red-600 font-bold">{error}</div>;
-    }
+    if (loading) return <div className="text-center py-20"><p className="text-lg text-gray-700">Chargement de la liste des produits...</p></div>;
+    if (error) return <div className="text-center py-20 text-red-600"><p className="text-lg">{error}</p></div>;
 
     return (
-        <div className="max-w-7xl mx-auto py-10 px-4">
-            <header className="flex justify-between items-center mb-8 border-b pb-4">
-                <h1 className="text-4xl font-bold text-brand-brown">Gestion des Produits</h1>
+        <div className="p-4">
+            <header className="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
+                <h1 className="text-3xl font-extrabold text-gray-800">Gestion de la Boutique (Produits)</h1>
                 <a 
-                    href="#/admin/new-product" 
-                    className="bg-brand-green text-white py-2 px-4 rounded-md shadow hover:bg-brand-ochre transition-colors"
+                    href="#/admin/new-product"
+                    className="flex items-center space-x-2 bg-brand-ochre text-white py-2 px-4 rounded-lg font-medium shadow-md hover:bg-yellow-700 transition-colors"
                 >
-                    + Ajouter un Nouveau Produit
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Ajouter un Produit</span>
                 </a>
             </header>
 
-            {message && (
-                <div className={`p-4 mb-4 rounded ${message.startsWith('✅') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {message}
-                </div>
-            )}
-
             {products.length === 0 ? (
-                <p className="text-center text-xl text-gray-500 py-16">
-                    Aucun produit dans la base de données.
-                </p>
+                <div className="text-center py-10 bg-white rounded-lg shadow">
+                    <p className="text-gray-500">Aucun produit n'est actuellement en boutique.</p>
+                </div>
             ) : (
-                <div className="bg-white shadow-xl rounded-lg overflow-hidden">
+                <div className="overflow-x-auto shadow-xl rounded-lg">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-100">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    ID
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Nom du Produit
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Prix
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Créé le
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {products.map((product: Product) => (
-                                <tr key={product.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.id}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{product.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-semibold">{formatPrice(product.price)}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{product.description}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                        
-                                        {/* 3. Lien vers la page de MODIFICATION */}
-                                        <a 
-                                            href={`#/admin/edit-product/${product.id}`} 
-                                            className="text-brand-ochre hover:text-brand-brown"
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {products.map((product) => (
+                                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {product.id}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-700 max-w-sm truncate">
+                                        {product.name}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">
+                                        {product.price.toFixed(2)} €
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {new Date(product.date).toLocaleDateString('fr-FR')}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-3">
+                                        <a
+                                            href={`#/admin/edit-product/${product.id}`}
+                                            className="text-brand-ochre hover:underline p-2 rounded-md transition-colors"
+                                            title="Éditer le produit"
                                         >
-                                            Modifier
+                                            Éditer
                                         </a>
-                                        
-                                        {/* 4. Bouton de SUPPRESSION */}
                                         <button
                                             onClick={() => handleDelete(product.id, product.name)}
-                                            disabled={deletingId === product.id}
-                                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                                            className="text-red-600 hover:text-red-800 p-2 rounded-md transition-colors"
+                                            title="Supprimer le produit"
                                         >
-                                            {deletingId === product.id ? 'Suppression...' : 'Supprimer'}
+                                            Supprimer
                                         </button>
                                     </td>
                                 </tr>

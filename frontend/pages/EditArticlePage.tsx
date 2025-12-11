@@ -1,62 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+// REMARQUE : On utilise window.location.hash pour revenir à la liste
+// au lieu de useNavigate, pour rester compatible avec notre routage manuel.
 
-interface Product {
+interface Article {
     id: number;
-    name: string;
-    price: number;
+    title: string;
+    content: string;
     image_url: string;
-    description: string;
-    date: string; // Utilisation de 'date'
+    date: string; // Utilisation de 'date' comme nom de colonne
+    summary: string;
 }
 
-interface EditProductPageProps {
-    productId: number;
+interface EditArticlePageProps {
+    articleId: number;
 }
 
-const EditProductPage: React.FC<EditProductPageProps> = ({ productId }) => {
-    const [product, setProduct] = useState<Product | null>(null);
+const EditArticlePage: React.FC<EditArticlePageProps> = ({ articleId }) => {
+    const [article, setArticle] = useState<Article | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // 1. CHARGEMENT DU PRODUIT EXISTANT
+    // 1. CHARGEMENT DE L'ARTICLE EXISTANT
     useEffect(() => {
-        const fetchProduct = async () => {
+        const fetchArticle = async () => {
             setLoading(true);
             const { data, error } = await supabase
-                .from('products')
-                .select('id, name, price, image_url, description, date')
-                .eq('id', productId)
+                .from('articles')
+                .select('id, title, content, image_url, summary, date')
+                .eq('id', articleId)
                 .single();
 
             if (error) {
-                console.error("Erreur de chargement du produit:", error);
-                setError("Impossible de charger le produit pour l'édition.");
-                setProduct(null);
+                console.error("Erreur de chargement de l'article:", error);
+                setError("Impossible de charger l'article pour l'édition.");
+                setArticle(null);
             } else {
-                setProduct(data as Product);
+                setArticle(data as Article);
             }
             setLoading(false);
         };
 
-        fetchProduct();
-    }, [productId]);
+        fetchArticle();
+    }, [articleId]);
 
     // 2. GESTION DES CHANGEMENTS DU FORMULAIRE
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        if (product) {
-            // Gère les champs normaux (textes, urls)
-            let value: string | number = e.target.value;
-
-            // Conversion du prix en nombre si le champ est 'price'
-            if (e.target.name === 'price') {
-                value = parseFloat(value) || 0; 
-            }
-
-            setProduct({
-                ...product,
-                [e.target.name]: value,
+        if (article) {
+            setArticle({
+                ...article,
+                [e.target.name]: e.target.value,
             });
         }
     };
@@ -64,86 +58,78 @@ const EditProductPage: React.FC<EditProductPageProps> = ({ productId }) => {
     // 3. SOUMISSION DU FORMULAIRE (MISE À JOUR)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!product || isSaving) return;
+        if (!article || isSaving) return;
 
         setIsSaving(true);
         setError(null);
         
         // Exclure l'ID et la date de la mise à jour
-        const { id, date, ...updates } = product;
-        
-        // Assurez-vous que le prix est bien un nombre avant d'envoyer
-        if (isNaN(updates.price)) {
-            setError("Le prix doit être un nombre valide.");
-            setIsSaving(false);
-            return;
-        }
+        const { id, date, ...updates } = article;
 
         const { error } = await supabase
-            .from('products')
+            .from('articles')
             .update(updates)
-            .eq('id', productId);
+            .eq('id', articleId);
 
         if (error) {
             setError(`Échec de la mise à jour : ${error.message}`);
         } else {
-            alert('Produit mis à jour avec succès !');
-            // Rediriger vers la liste des produits
-            window.location.hash = '#/admin/products';
+            alert('Article mis à jour avec succès !');
+            // Rediriger vers la liste des articles
+            window.location.hash = '#/admin/articles';
         }
         setIsSaving(false);
     };
 
-    if (loading) return <div className="text-center py-20"><p className="text-lg text-gray-700">Chargement des données du produit...</p></div>;
-    if (error && !product) return <div className="text-center py-20 text-red-600"><p className="text-lg">{error}</p></div>;
-    if (!product) return <div className="text-center py-20 text-gray-500"><p className="text-lg">Produit non trouvé.</p></div>;
+    if (loading) return <div className="text-center py-20"><p className="text-lg text-gray-700">Chargement des données de l'article...</p></div>;
+    if (error && !article) return <div className="text-center py-20 text-red-600"><p className="text-lg">{error}</p></div>;
+    if (!article) return <div className="text-center py-20 text-gray-500"><p className="text-lg">Article non trouvé.</p></div>;
 
     return (
         <div className="p-4">
             <h1 className="text-3xl font-bold mb-6 text-brand-dark-blue">
-                Éditer le Produit: {product.name}
+                Éditer l'Article: {article.title}
             </h1>
 
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-xl">
-                {/* Champ Nom */}
+                {/* Champ Titre */}
                 <div className="mb-4">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nom du Produit</label>
+                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">Titre</label>
                     <input
                         type="text"
-                        name="name"
-                        id="name"
-                        value={product.name}
+                        name="title"
+                        id="title"
+                        value={article.title}
                         onChange={handleChange}
                         required
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
                 </div>
 
-                {/* Champ Prix */}
+                {/* Champ Résumé */}
                 <div className="mb-4">
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Prix (€)</label>
-                    <input
-                        type="number"
-                        name="price"
-                        id="price"
-                        value={product.price}
+                    <label htmlFor="summary" className="block text-sm font-medium text-gray-700">Résumé (pour la page d'accueil)</label>
+                    <textarea
+                        name="summary"
+                        id="summary"
+                        value={article.summary}
                         onChange={handleChange}
                         required
-                        step="0.01"
+                        rows={3}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
                 </div>
                 
-                {/* Champ Description */}
+                {/* Champ Contenu */}
                 <div className="mb-4">
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description Détaillée</label>
+                    <label htmlFor="content" className="block text-sm font-medium text-gray-700">Contenu de l'Article</label>
                     <textarea
-                        name="description"
-                        id="description"
-                        value={product.description}
+                        name="content"
+                        id="content"
+                        value={article.content}
                         onChange={handleChange}
                         required
-                        rows={6}
+                        rows={10}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
                 </div>
@@ -155,7 +141,7 @@ const EditProductPage: React.FC<EditProductPageProps> = ({ productId }) => {
                         type="url"
                         name="image_url"
                         id="image_url"
-                        value={product.image_url}
+                        value={article.image_url}
                         onChange={handleChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
@@ -169,12 +155,12 @@ const EditProductPage: React.FC<EditProductPageProps> = ({ productId }) => {
                     <button
                         type="submit"
                         disabled={isSaving}
-                        className={`bg-brand-ochre text-white py-2 px-4 rounded-md font-semibold transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-700'}`}
+                        className={`bg-brand-blue text-white py-2 px-4 rounded-md font-semibold transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
                     >
                         {isSaving ? 'Sauvegarde en cours...' : 'Sauvegarder les Modifications'}
                     </button>
                     <a 
-                        href="#/admin/products"
+                        href="#/admin/articles"
                         className="bg-gray-400 text-white py-2 px-4 rounded-md font-semibold hover:bg-gray-500 transition-colors"
                     >
                         Annuler
@@ -185,4 +171,4 @@ const EditProductPage: React.FC<EditProductPageProps> = ({ productId }) => {
     );
 };
 
-export default EditProductPage;
+export default EditArticlePage;
