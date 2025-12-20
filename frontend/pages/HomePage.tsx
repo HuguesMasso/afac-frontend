@@ -1,100 +1,87 @@
 
 import React from 'react';
-// IMPORT SUPPRIMÉ : Nous n'utilisons plus les constantes statiques
-// import { ARTICLES, PRODUCTS } from '../constants'; 
-import { useContent } from '../hooks/useContent'; // <-- NOUVEL IMPORT
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
-import ArticleCard from '../components/ArticleCard';
-import ProductCard from '../components/ProductCard'; 
+// 1. IMPORTATION DE TON IMAGE
+// Si ton image s'appelle différemment (ex: photo.png), change le nom ci-dessous
+import topBannerImage from '../assets/top-banner.jpeg';
 
 const HomePage: React.FC = () => {
-  // --- UTILISATION DU HOOK POUR AVOIR LES DONNÉES DYNAMIQUES DE SUPABASE ---
-  const { articles, products, isLoading, error } = useContent();
-
-  // Affichage du chargement
-  if (isLoading) {
     return (
-      <div className="text-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-ochre mx-auto mb-4"></div>
-        <p className="text-xl text-brand-brown">Chargement du contenu depuis Supabase...</p>
-      </div>
+        <div className="flex flex-col min-h-screen font-sans">
+            <Header />
+
+            <main className="flex-grow">
+                {/* 2. SECTION IMAGE (JUSTE APRÈS LE HEADER) */}
+                <div className="w-full h-64 md:h-[550px] overflow-hidden bg-gray-200 border-b border-gray-100">
+                    <img
+                        src={topBannerImage}
+                        alt="AFACAHEAD Accueil"
+                        // object-cover permet à l'image de remplir l'espace sans se déformer
+                        className="w-full h-full object-cover shadow-inner"
+                    />
+                </div>
+
+                {/* Section Bannière d'introduction textuelle */}
+                <section className="bg-brand-beige py-20 px-4">
+                    <div className="container mx-auto max-w-4xl text-center">
+                        <h1 className="text-4xl md:text-5xl font-extrabold text-brand-dark-blue mb-6 leading-tight">
+                            L'Excellence et l'Innovation au Cœur de l'Afrique
+                        </h1>
+                        <p className="text-xl text-brand-gray mb-10 leading-relaxed">
+                            Découvrez AFACAHEAD, votre partenaire privilégié pour des solutions
+                            technologiques d'avant-garde et des produits de qualité supérieure.
+                            Nous forgeons l'avenir, aujourd'hui.
+                        </p>
+                        <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6">
+                            <a href="#/boutique" className="px-8 py-4 bg-brand-ochre text-white text-lg font-semibold rounded-full shadow-lg hover:bg-yellow-700 transition duration-300 w-full md:w-auto text-center">
+                                Explorer la Boutique
+                            </a>
+                            <a href="#/articles" className="px-8 py-4 bg-white text-brand-blue text-lg font-semibold rounded-full shadow-lg border-2 border-brand-blue hover:bg-blue-50 transition duration-300 w-full md:w-auto text-center">
+                                Lire nos Articles
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section "Pourquoi Nous Choisir" */}
+                <section className="py-16 bg-white">
+                    <div className="container mx-auto max-w-6xl px-4">
+                        <h2 className="text-3xl font-bold text-center text-brand-dark-blue mb-12">Pourquoi Choisir AFACAHEAD ?</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {/* Valeur 1 */}
+                            <div className="text-center p-6 border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                <div className="w-16 h-16 bg-green-50 text-brand-green rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2">Qualité Certifiée</h3>
+                                <p className="text-gray-600">Nous nous engageons à ne fournir que des produits répondant aux standards les plus élevés.</p>
+                            </div>
+                            {/* Valeur 2 */}
+                            <div className="text-center p-6 border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                <div className="w-16 h-16 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center mx-auto mb-4">
+                                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2">Innovation Continue</h3>
+                                <p className="text-gray-600">Toujours à la pointe de la technologie pour vous offrir des solutions modernes.</p>
+                            </div>
+                            {/* Valeur 3 */}
+                            <div className="text-center p-6 border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                <div className="w-16 h-16 bg-yellow-50 text-brand-ochre rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2">Support Dédié</h3>
+                                <p className="text-gray-600">Notre équipe est à votre écoute pour vous accompagner à chaque étape.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <Footer />
+        </div>
     );
-  }
-
-  // Affichage de l'erreur (si Supabase ne répond pas)
-  if (error) {
-    return <div className="text-center py-20 text-red-600 font-bold">{error}</div>;
-  }
-  
-  // Utilisation des données récupérées (limitées pour la page d'accueil)
-  const latestArticles = articles.slice(0, 4); 
-  const featuredProducts = products.slice(0, 5);
-
-  return (
-    <div className="space-y-16">
-      
-      {/* --------------------- SECTION : BANNIÈRE D'INTRODUCTION --------------------- */}
-      <section className="text-center py-12 bg-brand-sand rounded-lg shadow-inner">
-        <h1 className="text-5xl font-serif font-bold text-brand-brown mb-4">GROUPE NGANGUE ET FILS INTERNATIONAL</h1>
-        <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-          Les associations principales: AFAC -AHEAD.  APFI  AFL'EC
-        </p>
-      </section>
-
-      {/* --------------------- SECTION : NOS DERNIERS ARTICLES (DEPUIS SUPABASE) --------------------- */}
-      <section>
-        <h2 className="text-4xl font-serif font-bold text-center mb-10 text-brand-brown border-b-2 border-brand-ochre pb-2 inline-block mx-auto">
-          Nos derniers articles
-        </h2>
-        
-        {articles.length === 0 ? (
-            <p className="text-center text-gray-600">Aucun article trouvé. Ajoutez-en un depuis le panneau d'administration !</p>
-        ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-              {latestArticles.map(article => (
-                <ArticleCard key={article.id} article={article} />
-              ))}
-            </div>
-        )}
-        
-        <div className="text-center mt-10">
-          <a
-            href="#/articles" // Note : Cette page n'existe pas encore, mais le lien est prêt
-            className="inline-block bg-brand-ochre text-white font-semibold py-3 px-8 rounded-full transition-colors duration-300 hover:bg-brand-brown shadow-md"
-          >
-            Lire tous les récits
-          </a>
-        </div>
-      </section>
-
-      {/* --------------------- SECTION : BOUTIQUE (DEPUIS SUPABASE) --------------------- */}
-      <section className="pt-8">
-        <h2 className="text-4xl font-serif font-bold text-center mb-10 text-brand-brown border-b-2 border-brand-ochre pb-2 inline-block mx-auto">
-          Artisanat et Création
-        </h2>
-        
-        {products.length === 0 ? (
-             <p className="text-center text-gray-600">Aucun produit trouvé. Ajoutez-en un depuis le panneau d'administration !</p>
-        ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-        )}
-
-        <div className="text-center mt-10">
-          <a
-            href="#/shop"
-            className="inline-block bg-brand-green text-white font-semibold py-3 px-8 rounded-full transition-colors duration-300 hover:bg-brand-brown shadow-md"
-          >
-            Découvrir la Boutique
-          </a>
-        </div>
-      </section>
-
-    </div>
-  );
 };
 
 export default HomePage;
