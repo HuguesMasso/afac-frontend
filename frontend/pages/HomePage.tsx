@@ -4,7 +4,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 // 1. IMPORTATION DE TON IMAGE
-// Si ton image s'appelle différemment (ex: photo.png), change le nom ci-dessous
+// @ts-ignore
 import topBannerImage from '../assets/top-banner.jpeg';
 
 const HomePage: React.FC = () => {

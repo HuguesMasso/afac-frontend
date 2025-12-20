@@ -18,24 +18,28 @@ import AdminArticlesPage from './pages/AdminArticlesPage';
 import AdminDashboard from './pages/AdminDashboard';
 
 const App: React.FC = () => {
-  // Initialisation sécurisée : on s'assure que route n'est jamais undefined ou null
-  const [route, setRoute] = useState(window.location.hash || '#/');
+  // Initialisation sécurisée : on force une chaîne de caractères
+  const [route, setRoute] = useState<string>(window.location.hash || '#/');
 
   useEffect(() => {
-    const handleHashChange = () => setRoute(window.location.hash || '#/');
+    const handleHashChange = () => {
+      // On s'assure que même si le hash est vide, on a au moins '#/'
+      setRoute(window.location.hash || '#/');
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   const renderPage = () => {
-    // Sécurité supplémentaire : on s'assure qu'on travaille sur une chaîne
+    // SÉCURITÉ : On crée une copie locale garantie non-undefined pour les tests
     const currentRoute = route || '#/';
 
     // --- LOGIQUE DE ROUTAGE D'ADMINISTRATION ---
-    if (currentRoute.startsWith('#/admin')) {
+    // On vérifie d'abord si currentRoute existe avant le startsWith
+    if (currentRoute && currentRoute.startsWith('#/admin')) {
         return (
             <AdminPage>
-                {currentRoute === '#/admin' ? <AdminDashboard /> : null} 
+                {currentRoute === '#/admin' || currentRoute === '#/admin/' ? <AdminDashboard /> : null} 
                 {currentRoute === '#/admin/articles' ? <AdminArticlesPage /> : null} 
                 {currentRoute === '#/admin/new-article' ? <NewArticlePage /> : null}
                 {currentRoute.startsWith('#/admin/edit-article/') && (() => {
@@ -57,12 +61,13 @@ const App: React.FC = () => {
     }
 
     // --- ROUTES PUBLIQUES ---
-    if (currentRoute.startsWith('#/article/')) {
-      const id = parseInt(currentRoute.split('/')[2], 10);
-      return <ArticlePage articleId={id} />;
+    if (currentRoute && currentRoute.startsWith('#/article/')) {
+      const parts = currentRoute.split('/');
+      const id = parts[2] ? parseInt(parts[2], 10) : NaN;
+      return !isNaN(id) ? <ArticlePage articleId={id} /> : <HomePage />;
     }
     
-    if (currentRoute.startsWith('#/product/')) {
+    if (currentRoute && currentRoute.startsWith('#/product/')) {
         const productIdStr = currentRoute.substring('#/product/'.length);
         const productId = parseInt(productIdStr);
         if (!isNaN(productId)) return <ProductPage productId={productId} />;
@@ -72,23 +77,18 @@ const App: React.FC = () => {
     if (currentRoute === '#/articles') return <ArticlesPage />;
     if (currentRoute === '#/login') return <LoginPage />;
     
-    // Page d'accueil pour #/ ou n'importe quelle route non reconnue
+    // Si la route est vide ou ne correspond à rien : Accueil
     return <HomePage />;
   };
 
-  // On vérifie si on est sur l'admin pour adapter le layout (optionnel)
-  const isAdmin = route.startsWith('#/admin');
-
   return (
     <div className="min-h-screen flex flex-col">
-      {/* On n'affiche le Header/Footer classique que si on n'est pas dans l'interface admin personnalisée */}
-      {!isAdmin && <Header currentRoute={route} setRoute={setRoute} />}
-      
-      <main className={`flex-grow ${isAdmin ? '' : 'container mx-auto px-4'}`}>
+      {/* On passe la route actuelle au Header pour gérer l'état actif des menus */}
+      <Header currentRoute={route} setRoute={setRoute} /> 
+      <main className="flex-grow">
         {renderPage()}
       </main>
-
-      {!isAdmin && <Footer />}
+      <Footer />
     </div>
   );
 };
