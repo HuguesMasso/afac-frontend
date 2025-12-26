@@ -18,38 +18,49 @@ import AdminArticlesPage from './pages/AdminArticlesPage';
 import AdminDashboard from './pages/AdminDashboard';
 
 const App: React.FC = () => {
-  const [route, setRoute] = useState<string>(window.location.hash || '#/');
+  // 1. État pour la route
+  const [route, setRoute] = useState<string>("");
+  // 2. État crucial pour éviter l'erreur 418 (Hydration)
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // On initialise la route seulement une fois côté client
+    setRoute(window.location.hash || '#/');
+    setIsMounted(true);
+
     const handleHashChange = () => setRoute(window.location.hash || '#/');
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Si l'application n'est pas encore montée côté client, on affiche un écran vide propre
+  // Cela empêche Vercel de comparer un rendu serveur vide avec un rendu client plein
+  if (!isMounted) {
+    return null;
+  }
 
   const renderPage = () => {
     const currentRoute = route || '#/';
 
     // --- LOGIQUE ADMIN ---
     if (currentRoute.startsWith('#/admin')) {
-        return (
-            <AdminPage>
-                {currentRoute === '#/admin' && <AdminDashboard />} 
-                {currentRoute === '#/admin/articles' && <AdminArticlesPage />} 
-                {currentRoute === '#/admin/new-article' && <NewArticlePage />}
-                {currentRoute.startsWith('#/admin/edit-article/') && (() => {
-                        const id = parseInt(currentRoute.substring('#/admin/edit-article/'.length));
-                        return !isNaN(id) ? <EditArticlePage articleId={id} /> : null;
-                    })() 
-                }
-                {currentRoute === '#/admin/products' && <AdminProductsPage />} 
-                {currentRoute === '#/admin/new-product' && <NewProductPage />}
-                {currentRoute.startsWith('#/admin/edit-product/') && (() => {
-                        const id = parseInt(currentRoute.substring('#/admin/edit-product/'.length));
-                        return !isNaN(id) ? <EditProductPage productId={id} /> : null;
-                    })() 
-                }
-            </AdminPage>
-        );
+      return (
+        <AdminPage>
+          {currentRoute === '#/admin' && <AdminDashboard />}
+          {currentRoute === '#/admin/articles' && <AdminArticlesPage />}
+          {currentRoute === '#/admin/new-article' && <NewArticlePage />}
+          {currentRoute.startsWith('#/admin/edit-article/') && (() => {
+            const id = parseInt(currentRoute.substring('#/admin/edit-article/'.length));
+            return !isNaN(id) ? <EditArticlePage articleId={id} /> : null;
+          })()}
+          {currentRoute === '#/admin/products' && <AdminProductsPage />}
+          {currentRoute === '#/admin/new-product' && <NewProductPage />}
+          {currentRoute.startsWith('#/admin/edit-product/') && (() => {
+            const id = parseInt(currentRoute.substring('#/admin/edit-product/'.length));
+            return !isNaN(id) ? <EditProductPage productId={id} /> : null;
+          })()}
+        </AdminPage>
+      );
     }
 
     // --- ROUTES PUBLIQUES ---
@@ -57,26 +68,25 @@ const App: React.FC = () => {
     if (currentRoute === '#/articles') return <ArticlesPage />;
     if (currentRoute === '#/login') return <LoginPage />;
     if (currentRoute.startsWith('#/article/')) {
-        const id = parseInt(currentRoute.split('/')[2]);
-        return <ArticlePage articleId={id} />;
+      const id = parseInt(currentRoute.split('/')[2]);
+      return <ArticlePage articleId={id} />;
     }
-    
-    // PAR DÉFAUT : HomePage
+    if (currentRoute.startsWith('#/product/')) {
+      const id = parseInt(currentRoute.substring('#/product/'.length));
+      return <ProductPage productId={id} />;
+    }
+
     return <HomePage />;
   };
 
-  // Déterminer si on est sur l'admin pour cacher le Header/Footer standard
   const isAdmin = route.startsWith('#/admin');
 
   return (
     <div className="min-h-screen flex flex-col">
       {!isAdmin && <Header currentRoute={route} setRoute={setRoute} />}
-      
-      {/* On enlève le 'container' ici pour laisser les pages gérer leur propre largeur */}
       <main className="flex-grow">
         {renderPage()}
       </main>
-
       {!isAdmin && <Footer />}
     </div>
   );
