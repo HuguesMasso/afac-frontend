@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-// REMARQUE : On utilise window.location.hash pour revenir à la liste
-// au lieu de useNavigate, pour rester compatible avec notre routage manuel.
+import { v4 as uuidv4 } from 'uuid';
 
 interface Article {
     id: number;
     title: string;
     content: string;
     image_url: string;
-    date: string; // Utilisation de 'date' comme nom de colonne
+    date: string;
     summary: string;
 }
 
@@ -18,153 +17,182 @@ interface EditArticlePageProps {
 
 const EditArticlePage: React.FC<EditArticlePageProps> = ({ articleId }) => {
     const [article, setArticle] = useState<Article | null>(null);
+    const [newImageFile, setNewImageFile] = useState<File | null>(null);
+    
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // 1. CHARGEMENT DE L'ARTICLE EXISTANT
+    // 1. CHARGEMENT DE L'ARTICLE
     useEffect(() => {
         const fetchArticle = async () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('articles')
-                .select('id, title, content, image_url, summary, date')
+                .select('*')
                 .eq('id', articleId)
                 .single();
 
             if (error) {
-                console.error("Erreur de chargement de l'article:", error);
-                setError("Impossible de charger l'article pour l'édition.");
-                setArticle(null);
+                console.error("Erreur chargement:", error);
+                setError("Impossible de charger l'article.");
             } else {
                 setArticle(data as Article);
             }
             setLoading(false);
         };
-
         fetchArticle();
     }, [articleId]);
 
-    // 2. GESTION DES CHANGEMENTS DU FORMULAIRE
+    // 2. GESTION DES CHAMPS
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (article) {
-            setArticle({
-                ...article,
-                [e.target.name]: e.target.value,
-            });
+            setArticle({ ...article, [e.target.name]: e.target.value });
         }
     };
 
-    // 3. SOUMISSION DU FORMULAIRE (MISE À JOUR)
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setNewImageFile(e.target.files[0]);
+        }
+    };
+
+    // 3. SAUVEGARDE
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!article || isSaving) return;
 
         setIsSaving(true);
         setError(null);
-        
-        // Exclure l'ID et la date de la mise à jour
-        const { id, date, ...updates } = article;
 
-        const { error } = await supabase
-            .from('articles')
-            .update(updates)
-            .eq('id', articleId);
+        try {
+            let finalImageUrl = article.image_url;
 
-        if (error) {
-            setError(`Échec de la mise à jour : ${error.message}`);
-        } else {
-            alert('Article mis à jour avec succès !');
-            // Rediriger vers la liste des articles
+            // Si nouvelle image, on upload
+            if (newImageFile) {
+                const fileExt = newImageFile.name.split('.').pop();
+                const fileName = `${uuidv4()}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('afac-images')
+                    .upload(filePath, newImageFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicData } = supabase.storage
+                    .from('afac-images')
+                    .getPublicUrl(filePath);
+                
+                finalImageUrl = publicData.publicUrl;
+            }
+
+            // Update en base
+            const { error: updateError } = await supabase
+                .from('articles')
+                .update({
+                    title: article.title,
+                    summary: article.summary,
+                    content: article.content,
+                    image_url: finalImageUrl,
+                })
+                .eq('id', articleId);
+
+            if (updateError) throw updateError;
+
+            alert('Article modifié avec succès !');
             window.location.hash = '#/admin/articles';
+
+        } catch (err: any) {
+            console.error("Erreur sauvegarde:", err);
+            setError(`Erreur : ${err.message}`);
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
     };
 
-    if (loading) return <div className="text-center py-20"><p className="text-lg text-gray-700">Chargement des données de l'article...</p></div>;
-    if (error && !article) return <div className="text-center py-20 text-red-600"><p className="text-lg">{error}</p></div>;
-    if (!article) return <div className="text-center py-20 text-gray-500"><p className="text-lg">Article non trouvé.</p></div>;
+    if (loading) return <div className="p-10 text-center">Chargement...</div>;
+    if (!article) return <div className="p-10 text-center text-red-500">Article introuvable.</div>;
 
     return (
-        <div className="p-4">
-            <h1 className="text-3xl font-bold mb-6 text-brand-dark-blue">
-                Éditer l'Article: {article.title}
-            </h1>
+        <div className="max-w-4xl mx-auto py-8 px-4">
+            <h1 className="text-3xl font-bold mb-6 text-brand-dark-blue">Modifier l'Article</h1>
+            
+            {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-6">{error}</div>}
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-xl">
-                {/* Champ Titre */}
-                <div className="mb-4">
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">Titre</label>
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-lg space-y-6">
+                
+                {/* Titre */}
+                <div>
+                    <label className="block font-bold text-gray-700 mb-2">Titre</label>
                     <input
                         type="text"
                         name="title"
-                        id="title"
                         value={article.title}
                         onChange={handleChange}
+                        className="w-full border p-3 rounded focus:ring-2 focus:ring-brand-blue"
                         required
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                     />
                 </div>
 
-                {/* Champ Résumé */}
-                <div className="mb-4">
-                    <label htmlFor="summary" className="block text-sm font-medium text-gray-700">Résumé (pour la page d'accueil)</label>
+                {/* Image */}
+                <div className="p-4 bg-gray-50 rounded border">
+                    <label className="block font-bold text-gray-700 mb-2">Image de couverture</label>
+                    {article.image_url && !newImageFile && (
+                        <div className="mb-4">
+                            <img src={article.image_url} alt="Actuelle" className="h-32 object-cover rounded shadow" />
+                        </div>
+                    )}
+                    <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-500"
+                    />
+                </div>
+
+                {/* Résumé */}
+                <div>
+                    <label className="block font-bold text-gray-700 mb-2">Résumé</label>
                     <textarea
                         name="summary"
-                        id="summary"
-                        value={article.summary}
+                        value={article.summary || ''}
                         onChange={handleChange}
-                        required
                         rows={3}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        className="w-full border p-3 rounded focus:ring-2 focus:ring-brand-blue"
                     />
                 </div>
-                
-                {/* Champ Contenu */}
-                <div className="mb-4">
-                    <label htmlFor="content" className="block text-sm font-medium text-gray-700">Contenu de l'Article</label>
+
+                {/* Contenu */}
+                <div>
+                    <label className="block font-bold text-gray-700 mb-2">Contenu</label>
                     <textarea
                         name="content"
-                        id="content"
                         value={article.content}
                         onChange={handleChange}
-                        required
                         rows={10}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        className="w-full border p-3 rounded focus:ring-2 focus:ring-brand-blue"
+                        required
                     />
                 </div>
 
-                {/* Champ Image URL */}
-                <div className="mb-6">
-                    <label htmlFor="image_url" className="block text-sm font-medium text-gray-700">URL de l'Image</label>
-                    <input
-                        type="url"
-                        name="image_url"
-                        id="image_url"
-                        value={article.image_url}
-                        onChange={handleChange}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                    />
-                </div>
-
-                {/* Message d'erreur/succès */}
-                {error && <p className="text-red-500 mb-4">{error}</p>}
-
-                {/* Bouton de Soumission */}
-                <div className="flex space-x-4">
+                {/* --- C'EST ICI QUE MANQUAIT LE BOUTON --- */}
+                <div className="flex items-center gap-4 pt-6 border-t mt-6">
                     <button
                         type="submit"
                         disabled={isSaving}
-                        className={`bg-brand-blue text-white py-2 px-4 rounded-md font-semibold transition-colors ${isSaving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+                        className={`px-6 py-3 bg-brand-ochre text-white font-bold rounded hover:bg-yellow-600 transition shadow-md ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        {isSaving ? 'Sauvegarde en cours...' : 'Sauvegarder les Modifications'}
+                        {isSaving ? 'Enregistrement...' : 'Enregistrer les modifications'}
                     </button>
-                    <a 
-                        href="#/admin/articles"
-                        className="bg-gray-400 text-white py-2 px-4 rounded-md font-semibold hover:bg-gray-500 transition-colors"
+
+                    <button 
+                        type="button"
+                        onClick={() => window.location.hash = '#/admin/articles'}
+                        className="px-6 py-3 bg-gray-300 text-gray-700 font-bold rounded hover:bg-gray-400 transition"
                     >
                         Annuler
-                    </a>
+                    </button>
                 </div>
             </form>
         </div>

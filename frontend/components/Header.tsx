@@ -1,68 +1,118 @@
+import React, { useState } from 'react';
 
-import React from 'react';
-
+// On définit les types pour être rigoureux
 interface HeaderProps {
     currentRoute: string;
-    setRoute: (route: string) => void; 
+    setRoute: (route: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentRoute }) => {
-    
-    const getLinkClass = (path: string) => {
-        // La classe de base pour tous les liens
-        const baseClass = "text-lg hover:text-brand-ochre transition-colors duration-300";
-        
-        // Logique pour déterminer si le lien est actif :
-        // 1. Si on est sur la racine ('#/'), on vérifie si la route est vide ou '#/'
-        // 2. Sinon, on vérifie si la route actuelle commence par le chemin du lien
-        const isActive = (path === '#/' && (currentRoute === '' || currentRoute === '#/')) 
-                       || (path !== '#/' && currentRoute.startsWith(path));
-                       
-        // Si actif, ajoute le style gras et la couleur ocre, sinon la couleur verte par défaut
-        return isActive ? `${baseClass} text-brand-ochre font-bold` : `${baseClass} text-brand-green`;
+const Header: React.FC<HeaderProps> = ({ currentRoute, setRoute }) => {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Fonction de navigation sécurisée
+    const navigate = (path: string) => {
+        window.location.hash = path;
+        setRoute(path);
+        setIsMobileMenuOpen(false); // Ferme le menu mobile après clic
     };
-    
+
+    // --- SÉCURITÉ ICI : On s'assure que routeSafe est toujours une chaîne de texte ---
+    const routeSafe = currentRoute || ''; 
+
+    // Helper pour savoir si un lien est actif
+    const isActive = (path: string) => {
+        if (path === '#/') return routeSafe === '#/' || routeSafe === '';
+        return routeSafe.startsWith(path);
+    };
+
     return (
-        <header 
-            // MODIFICATIONS CLÉS POUR L'ESPACEMENT ET LA SÉPARATION
-            // py-5: padding vertical intérieur
-            // mb-8: marge inférieure pour espacer le contenu suivant
-            // border-b border-gray-200: ligne de séparation professionnelle
-            className="bg-brand-sand shadow-md sticky top-0 z-50 py-5 mb-8 border-b border-gray-200" 
-        >
-            <div className="container mx-auto px-4 flex justify-between items-center"> 
+        <header className="bg-white shadow-md sticky top-0 z-50 font-sans">
+            <div className="container mx-auto px-4 py-4 flex justify-between items-center">
                 
-                {/* Logo / Nom du Site */}
-                <a href="#/" className="text-3xl font-bold font-serif text-brand-brown tracking-wider">
-                    AFAC AHEAD
-                </a>
-                
-                {/* Navigation Principale */}
-                <nav>
-                    <ul className="flex space-x-8 items-center">
-                        <li>
-                            <a href="#/" className={getLinkClass('#/')}>
-                                Accueil
-                            </a>
-                        </li>
-                        
-                        {/* LIEN VERS LA LISTE D'ARTICLES (Blog) */}
-                        <li>
-                            <a href="#/articles" className={getLinkClass('#/articles')}>
-                                Articles
-                            </a>
-                        </li>
-                        
-                        {/* LIEN VERS LA LISTE DE PRODUITS (Boutique) */}
-                        <li>
-                            <a href="#/shop" className={getLinkClass('#/shop')}>
-                                Boutique
-                            </a>
-                        </li>
-                        
-                    </ul>
+                {/* LOGO */}
+                <div 
+                    className="text-2xl font-extrabold text-brand-dark-blue cursor-pointer tracking-tighter"
+                    onClick={() => navigate('#/')}
+                >
+                    AFACAHEAD
+                </div>
+
+                {/* MENU BUREAU (Desktop) */}
+                <nav className="hidden md:flex space-x-8">
+                    <button 
+                        onClick={() => navigate('#/')}
+                        className={`text-base font-medium transition-colors duration-300 ${isActive('#/') ? 'text-brand-ochre' : 'text-gray-600 hover:text-brand-ochre'}`}
+                    >
+                        Accueil
+                    </button>
+                    <button 
+                        onClick={() => navigate('#/shop')}
+                        className={`text-base font-medium transition-colors duration-300 ${isActive('#/shop') ? 'text-brand-ochre' : 'text-gray-600 hover:text-brand-ochre'}`}
+                    >
+                        Boutique
+                    </button>
+                    <button 
+                        onClick={() => navigate('#/articles')}
+                        className={`text-base font-medium transition-colors duration-300 ${isActive('#/articles') ? 'text-brand-ochre' : 'text-gray-600 hover:text-brand-ochre'}`}
+                    >
+                        Articles
+                    </button>
+                    <button 
+                        onClick={() => navigate('#/admin')} // Ou #/login
+                        className="px-5 py-2 bg-brand-dark-blue text-white rounded-full font-semibold hover:bg-blue-900 transition shadow-md"
+                    >
+                        Espace Admin
+                    </button>
                 </nav>
+
+                {/* BOUTON MENU MOBILE (Hamburger) */}
+                <div className="md:hidden">
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="text-gray-600 hover:text-brand-dark-blue focus:outline-none"
+                    >
+                        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            {isMobileMenuOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
+                    </button>
+                </div>
             </div>
+
+            {/* MENU MOBILE (Déroulant) */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden bg-white border-t border-gray-100">
+                    <div className="flex flex-col px-4 py-2 space-y-2">
+                        <button 
+                            onClick={() => navigate('#/')}
+                            className={`text-left py-2 font-medium ${isActive('#/') ? 'text-brand-ochre' : 'text-gray-600'}`}
+                        >
+                            Accueil
+                        </button>
+                        <button 
+                            onClick={() => navigate('#/shop')}
+                            className={`text-left py-2 font-medium ${isActive('#/shop') ? 'text-brand-ochre' : 'text-gray-600'}`}
+                        >
+                            Boutique
+                        </button>
+                        <button 
+                            onClick={() => navigate('#/articles')}
+                            className={`text-left py-2 font-medium ${isActive('#/articles') ? 'text-brand-ochre' : 'text-gray-600'}`}
+                        >
+                            Articles
+                        </button>
+                        <button 
+                            onClick={() => navigate('#/admin')}
+                            className="text-left py-2 font-bold text-brand-dark-blue"
+                        >
+                            Espace Admin
+                        </button>
+                    </div>
+                </div>
+            )}
         </header>
     );
 };

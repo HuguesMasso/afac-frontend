@@ -5,12 +5,12 @@ const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setMessage('');
+        setError(null);
 
         const { error } = await supabase.auth.signInWithPassword({
             email,
@@ -18,47 +18,52 @@ const LoginPage: React.FC = () => {
         });
 
         if (error) {
-            setMessage(`Erreur de connexion : ${error.message}`);
+            setError("Email ou mot de passe incorrect.");
+            setLoading(false);
         } else {
-            // Redirige l'utilisateur vers le tableau de bord Admin
-            window.location.hash = '#/admin'; 
+            // Si la connexion réussit, App.tsx va le détecter automatiquement
+            // et rediriger vers #/admin grâce au useEffect.
+            window.location.hash = '#/admin';
         }
-        setLoading(false);
     };
 
     return (
-        <div className="max-w-md mx-auto py-12">
-            <h1 className="text-3xl font-serif font-bold text-center text-brand-brown mb-6">Connexion Admin</h1>
-            <form onSubmit={handleLogin} className="bg-white p-6 rounded-lg shadow-lg">
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                        required
-                    />
-                </div>
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                        required
-                    />
-                </div>
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-brand-ochre text-white py-2 rounded-md font-semibold hover:bg-brand-brown transition-colors disabled:bg-gray-400"
-                >
-                    {loading ? 'Chargement...' : 'Se connecter'}
-                </button>
-                {message && <p className="mt-4 text-center text-sm text-red-600">{message}</p>}
-            </form>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+            <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+                <h2 className="text-3xl font-bold text-center text-brand-dark-blue mb-8">Connexion Admin</h2>
+                
+                {error && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">{error}</div>}
+                
+                <form onSubmit={handleLogin} className="space-y-6">
+                    <div>
+                        <label className="block text-gray-700 font-bold mb-2">Email</label>
+                        <input 
+                            type="email" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full border p-3 rounded focus:ring-2 focus:ring-brand-blue"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 font-bold mb-2">Mot de passe</label>
+                        <input 
+                            type="password" 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full border p-3 rounded focus:ring-2 focus:ring-brand-blue"
+                            required
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        disabled={loading}
+                        className="w-full bg-brand-ochre text-white font-bold py-3 rounded hover:bg-yellow-600 transition"
+                    >
+                        {loading ? 'Connexion...' : 'Se connecter'}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 };
