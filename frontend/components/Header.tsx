@@ -34,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ currentRoute, setRoute }) => {
                     className="text-2xl font-extrabold text-brand-dark-blue cursor-pointer tracking-tighter"
                     onClick={() => navigate('#/')}
                 >
-                    AFACAHEAD
+                    AFAC - AHEAD
                 </div>
 
                 {/* MENU BUREAU (Desktop) */}

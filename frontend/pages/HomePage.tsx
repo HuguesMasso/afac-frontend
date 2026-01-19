@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 // @ts-ignore
-import topBannerImage from '../assets/top-banner.jpeg';
+import topBannerImage from '../assets/ngangue1.jpg';
 import { supabase } from '../supabaseClient';
 
 // On définit la structure d'un article tel qu'il vient de la base de données
